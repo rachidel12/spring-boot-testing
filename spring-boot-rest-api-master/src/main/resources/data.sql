@@ -25,10 +25,10 @@ CREATE TABLE IF NOT EXISTS UserLibrary (
     FOREIGN KEY (gameId) REFERENCES games(game_id)
 );
 
-INSERT INTO users (name, email, password ) VALUES   ( 'admin', 'admin@mail.com', 'SampleP@s123' ),
-                                                    ( 'johny', 'johny@mail.com', 'SampleP@s123' ),
-                                                    ( 'ramazan', 'rmzn@mail.com', 'SampleP@s123' ),
-                                                    ( 'teten-nugraha', 'teten@mail.com', 'SampleP@s123' );
+INSERT INTO users (name, email, password ) VALUES   ( 'admin', 'admin@mail.com', 'admin123' ),
+                                                    ( 'johny', 'johny@mail.com', 'user123' ),
+                                                    ( 'ramazan', 'rmzn@mail.com', 'user123' ),
+                                                    ( 'teten-nugraha', 'teten@mail.com', 'user123' );
 
 -- Sample data for Game table
 INSERT INTO games (game_id, title, genre, release_date) VALUES
