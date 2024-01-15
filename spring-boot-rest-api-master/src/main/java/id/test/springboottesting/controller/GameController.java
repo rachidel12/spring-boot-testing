@@ -31,6 +31,13 @@ public class GameController {
         return gameService.getAllGames();
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Game> getGameById(@PathVariable Long id) {
+        return gameService.getGameById(id)
+                .map(game -> ResponseEntity.ok(game)) // game found, return 200
+                .orElseGet(() -> ResponseEntity.notFound().build()); // game not found, return 404
+    }
+
     @PostMapping
     public Game createGame(@RequestBody Game game) {
         return gameService.createGame(game);
