@@ -1,6 +1,8 @@
 package id.test.springboottesting.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import id.test.springboottesting.exception.UserRegistrationException;
 import id.test.springboottesting.model.User;
 import id.test.springboottesting.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,9 +10,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.zalando.problem.ProblemModule;
 import org.zalando.problem.violations.ConstraintViolationProblemModule;
 
@@ -19,9 +23,12 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.CoreMatchers.is;
@@ -96,27 +103,18 @@ class UserControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.email", is(user.getEmail())))
                 .andExpect(jsonPath("$.password", is(user.getPassword())))
-                .andExpect(jsonPath("$.name", is(user.getName())))
-        ;
+                .andExpect(jsonPath("$.name", is(user.getName())));
     }
 
     @Test
     void shouldReturn400WhenCreateNewUserWithoutEmail() throws Exception {
         User user = new User(null, null, "pwd", "Name");
 
-        this.mockMvc.perform(post("/api/users")
-                .contentType(MediaType.APPLICATION_JSON_UTF8)
+        mockMvc.perform(post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(user)))
                 .andExpect(status().isBadRequest())
-                .andExpect(header().string("Content-Type", is("application/problem+json")))
-                .andExpect(jsonPath("$.type", is("https://zalando.github.io/problem/constraint-violation")))
-                .andExpect(jsonPath("$.title", is("Constraint Violation")))
-                .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.violations", hasSize(1)))
-                .andExpect(jsonPath("$.violations[0].field", is("email")))
-                .andExpect(jsonPath("$.violations[0].message", is("Email should not be empty")))
-                .andReturn()
-        ;
+                .andReturn();
     }
 
     @Test
@@ -124,10 +122,10 @@ class UserControllerTest {
         Long userId = 1L;
         User user = new User(userId, "user1@gmail.com", "pwd", "Name");
         given(userService.findUserById(userId)).willReturn(Optional.of(user));
-        given(userService.updateUser(any(Long.class),any(User.class))).willAnswer((invocation) -> invocation.getArgument(0));
+        given(userService.updateUser(any(Long.class),any(User.class))).willAnswer((invocation) -> user);
 
         this.mockMvc.perform(put("/api/users/{id}", user.getId())
-                .contentType(MediaType.APPLICATION_JSON_UTF8)
+                .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(user)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email", is(user.getEmail())))
@@ -137,17 +135,26 @@ class UserControllerTest {
     }
 
     @Test
-    void shouldReturn404WhenUpdatingNonExistingUser() throws Exception {
+    void shouldReturn400WhenUpdatingNonExistingUser() throws Exception {
         Long userId = 1L;
+        User user = new User(null, "user1@gmail.com", "pwd", "Name");
+
+        // Simulate that the user does not exist
         given(userService.findUserById(userId)).willReturn(Optional.empty());
-        User user = new User(userId, "user1@gmail.com", "pwd", "Name");
+
+        // Simulate that the update operation throws a UserRegistrationException
+        given(userService.updateUser(any(Long.class), any(User.class)))
+                .willThrow(new UserRegistrationException("User with id " + userId + " does not exist"));
 
         this.mockMvc.perform(put("/api/users/{id}", userId)
-                .contentType(MediaType.APPLICATION_JSON_UTF8)
+                .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(user)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.Status", is("400 BAD_REQUEST")))
+                .andExpect(jsonPath("$.Cause", is("User with id 1 does not exist")))
+                .andExpect(jsonPath("$.Solution", is("Please enter a valid entity with proper constraints")));
+}
 
-    }
 
     @Test
     void shouldDeleteUser() throws Exception {

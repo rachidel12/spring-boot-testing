@@ -41,7 +41,7 @@ public class UserController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @PostMapping
+    @PostMapping(produces = "application/json")
     @ResponseStatus(HttpStatus.CREATED)
     public User createUser(@RequestBody @Valid User user) {
         return userService.createUser(user);

@@ -1,5 +1,8 @@
 package id.test.springboottesting.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -16,6 +19,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
@@ -24,6 +28,7 @@ import org.zalando.problem.ProblemModule;
 import org.zalando.problem.violations.ConstraintViolationProblemModule;
 
 import id.test.springboottesting.model.Game;
+import id.test.springboottesting.model.User;
 import id.test.springboottesting.service.GameService;
 
 @WebMvcTest(controllers = GameController.class)
@@ -92,17 +97,16 @@ class GameControllerTest {
     void createGame_ShouldReturnCreatedGame() throws Exception {
         // Arrange
         Game gameToCreate = new Game(null, "New Game", "New Genre", new Date());
-        Game createdGame = new Game(1L, "New Game", "New Genre", new Date());
-        when(gameService.createGame(gameToCreate)).thenReturn(createdGame);
-
+        Game createdGame = new Game(1L, "New Game", "New Genre", new Date()); 
+        given(gameService.createGame(any(Game.class))).willAnswer((invocation) -> createdGame);
         // Act & Assert
         mockMvc.perform(MockMvcRequestBuilders.post("/api/games")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(new ObjectMapper().writeValueAsString(gameToCreate)))
+                .content(objectMapper.writeValueAsString(gameToCreate)))
                 .andExpect(status().isOk())
-                // .andExpect(MockMvcResultMatchers.jsonPath("$.game_id").value(1L))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.title").value(createdGame.getTitle()))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.genre").value(createdGame.getGenre()));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.game_id").value(1L))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.title").value(gameToCreate.getTitle()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.genre").value(gameToCreate.getGenre()));
     }
 
     @Test
@@ -110,7 +114,7 @@ class GameControllerTest {
         // Arrange
         Long gameId = 1L;
         Game updatedGame = new Game(gameId, "Updated Game", "Updated Genre", new Date());
-        when(gameService.updateGame(gameId, updatedGame)).thenReturn(updatedGame);
+        given(gameService.updateGame(any(Long.class) ,any(Game.class))).willAnswer((invocation) -> updatedGame);
 
         // Act & Assert
         mockMvc.perform(MockMvcRequestBuilders.put("/api/games/{id}", gameId)
